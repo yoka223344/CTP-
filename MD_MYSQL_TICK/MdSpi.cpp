@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "Logger.h"
 #include "StatNode.h"
+#include "TimeConvert.h"
 using namespace std;
 #pragma warning(disable : 4996)
 //#pragma comment(lib,"Ws2_32.lib") 
@@ -116,6 +117,10 @@ void GetTableName(char *str, char *table)
 			strcpy(table, "TC_FutureMarket");
 	else if (!strcmp(str, "WH"))
 			strcpy(table, "WH_FutureMarket");
+	else if (!strcmp(str, "sn"))
+			strcpy(table, "Sn_FutureMarket");
+	else if (!strcmp(str, "ni"))
+			strcpy(table, "Ni_FutureMarket");
 }
 
 void CMdSpi::OnRspError(CThostFtdcRspInfoField *pRspInfo,
@@ -231,7 +236,7 @@ void CMdSpi::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketDa
     }
 	
     //连接数据库
-    if (NULL!= mysql_real_connect(&mydata, "192.168.22.59", "root", "abc0cba", "FutureMarket",
+    if (NULL!= mysql_real_connect(&mydata, "localhost", "root", "abc0cba", "FutureMarket",
                     3306, NULL, 0))
             //这里的地址，用户名，密码，数据库，端口可以根据自己本地的情况更改
 	{
@@ -243,28 +248,30 @@ void CMdSpi::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketDa
 			ClosePrice = pDepthMarketData->ClosePrice;
 		if (pDepthMarketData->OpenPrice <= 100000 && pDepthMarketData->OpenPrice >= 0)
 			OpenPrice = pDepthMarketData->OpenPrice;
-		char Instrument_kind[2];
+		char Instrument_kind[3];
 		char table[15];
 		if ((int)(pDepthMarketData->InstrumentID[1] - 'A') >= 0 )
 		{
-			char lin[2] = {pDepthMarketData->InstrumentID[0], pDepthMarketData->InstrumentID[1]};
+			char lin[3] = {pDepthMarketData->InstrumentID[0], pDepthMarketData->InstrumentID[1],'\0'};
 			strcpy(Instrument_kind, lin);
 		}
 		else
 		{
-			char lin[2] = {pDepthMarketData->InstrumentID[0], '\0'};
+			char lin[3] = {pDepthMarketData->InstrumentID[0], '\0', '\0'};
 			strcpy(Instrument_kind, lin);
 		}
 		GetTableName(Instrument_kind, table);
+		time_t timestamp;
+		timestamp = TimeStamp_Convert(pDepthMarketData->ActionDay, pDepthMarketData->UpdateTime);
 		sprintf(mysql_quer,"INSERT INTO `%s`(`TradingDay`, `InstrumentID`, `ExchangeID`, \
 `ExchangeInstID`, `LastPrice`,`HighestPrice`, `LowestPrice`, `Volume`, `Turnover`, `OpenInterest`, \
 `SettlementPrice`, `UpperLimitPrice`, `LowerLimitPrice`, `CurrDelta`, `UpdateTime`, `UpdateMillisec`, \
 `BidPrice1`, `BidVolume1`, `AskPrice1`, `AskVolume1`, `BidPrice2`, `BidVolume2`, `AskPrice2`, `AskVolume2`, \
 `BidPrice3`, `BidVolume3`, `AskPrice3`, `AskVolume3`, `BidPrice4`, `BidVolume4`, `AskPrice4`, `AskVolume4`, \
-`BidPrice5`, `BidVolume5`, `AskPrice5`, `AskVolume5`, `AveragePrice`, `ActionDay`) \
+`BidPrice5`, `BidVolume5`, `AskPrice5`, `AskVolume5`, `AveragePrice`, `ActionDay`, `TimeStamp`) \
 VALUES (\"%s\",\"%s\",\"%s\",\"%s\",%10.2lf,%10.2lf,%10.2lf,%ld,\
 %10.2lf,%10.2lf,%10.2lf,%10.2lf,%10.2lf,%10.2lf,\"%s\",%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,\
-%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,\"%s\")",
+%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,%ld,%10.2lf,\"%s\", %ld)",
 							table,
 							pDepthMarketData->TradingDay,
 							pDepthMarketData->InstrumentID,
@@ -311,7 +318,8 @@ VALUES (\"%s\",\"%s\",\"%s\",\"%s\",%10.2lf,%10.2lf,%10.2lf,%ld,\
 							0,
 							pDepthMarketData->AskVolume5,
 							pDepthMarketData->AveragePrice,
-							pDepthMarketData->ActionDay
+							pDepthMarketData->ActionDay,
+							timestamp
 							);
 		//cerr << mysql_quer << endl;
 		int tmp_k = 0;
@@ -350,8 +358,10 @@ VALUES (\"%s\", \"%s\", %10.2lf, %10.2lf, %10.2lf, %10.2lf, %10.2lf, %10.2lf, %1
 				char table_min[19];
 				strcpy(table_min, table);
 				strcat(table_min, "_MIN");
+				time_t timestamp;
+				timestamp = TimeStamp_Convert(Stat_queue[tmp_k].TradingDay, Stat_queue[tmp_k].Updatetime);
 				sprintf(min_sql,"INSERT INTO `%s`\
-(`TradingDay`, `InstrumentID`, `High`, `Low`, `Open`, `Close`,`Volume`, `AgrVolume`, `OpenInterest`,`Updatetime`) VALUES (\"%s\",\"%s\",%10.2lf,%10.2lf,%10.2lf,%10.2lf,%ld,%ld,%10.2lf,\"%s\")",
+(`TradingDay`, `InstrumentID`, `High`, `Low`, `Open`, `Close`,`Volume`, `AgrVolume`, `OpenInterest`,`Updatetime`, `TimeStamp`) VALUES (\"%s\",\"%s\",%10.2lf,%10.2lf,%10.2lf,%10.2lf,%ld,%ld,%10.2lf,\"%s\", %ld)",
 					table_min,
 					Stat_queue[tmp_k].TradingDay,
 					Stat_queue[tmp_k].InstrumentID,
@@ -362,7 +372,8 @@ VALUES (\"%s\", \"%s\", %10.2lf, %10.2lf, %10.2lf, %10.2lf, %10.2lf, %10.2lf, %1
 					Stat_queue[tmp_k].Volume,
 					Stat_queue[tmp_k].agrVolume,
 					Stat_queue[tmp_k].OpenInterset,
-					Stat_queue[tmp_k].Updatetime);
+					Stat_queue[tmp_k].Updatetime,
+					timestamp);
 				if (mysql_query(&mydata, min_sql) != 0)
 				{
 	

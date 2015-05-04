@@ -23,8 +23,8 @@ CThostFtdcTraderApi *pUserApi;
 Logger *my_logger;
 
 // ???ò???
-char  FRONT_ADDR_TRADER[] = "tcp://asp-sim2-front1.financial-trading-platform.com:26205";   //????ǰ?õ?ַ
-char FRONT_ADDR_MD[] = "tcp://asp-sim2-md1.financial-trading-platform.com:26213";		// ????ǰ?õ?ַ
+char  FRONT_ADDR_TRADER[] = "tcp://180.168.146.181:10000";   //????ǰ?õ?ַ
+char FRONT_ADDR_MD[] = "tcp://180.168.146.181:10100";		// ????ǰ?õ?ַ
 TThostFtdcBrokerIDType	BROKER_ID = "2030";				// ???͹?˾????
 TThostFtdcInvestorIDType INVESTOR_ID = "00092";			// Ͷ???ߴ???
 TThostFtdcPasswordType  PASSWORD = "888888";			// ?û?????
@@ -77,8 +77,8 @@ int main()
 	pMdApi->RegisterSpi(pMdSpi);						
 	pMdApi->RegisterFront(FRONT_ADDR_MD);					// connect
 	pMdApi->Init();
-	pUserApi->Init();
-	pUserApi->Join();
+	//pUserApi->Init();
+	//pUserApi->Join();
 	pMdApi->Join();
 	return 0;
 }

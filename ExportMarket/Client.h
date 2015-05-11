@@ -13,15 +13,19 @@ class InstrumentNode
 	public:
 		char InstrumentID[11];
 		int type;
-		InstrumentNode(char *InstrumentID, int type);
+		int span;
+		ClientBase *myClientBase;
+		Node *tmp_Node;
+		long timestamp;
+		InstrumentNode(char *InstrumentID, int type, int pspan, int Max_Size);
+		~InstrumentNode();
 };
 class Client
 {
 	private:
-		vector<InstrumentNode> Instrument;
-		vector<ClientBase *> myClientBase;
+		vector<InstrumentNode *> Instrument;
 		Datafetch *mydatafetch;
-		int find(const char *InstrumentID, int type);
+		int find(const char *InstrumentID, int type, int span);
 		int getSpan(int type, int span);
 	public:
 	    Client()
@@ -29,15 +33,15 @@ class Client
 	        mydatafetch = new Datafetch;
 	    }
 		bool find(char *InstrumentID);
-		void AddInstrument(char *InstrumentID, int type, int Max_Size);
-		void AddInstrument(const char *InstrumentID, int type, int Max_Size);
+		void AddInstrument(char *InstrumentID, int type, int span, int Max_Size);
+		void AddInstrument(const char *InstrumentID, int type, int span, int Max_Size);
 		int getOpen(double *Open, char *InstrumentID, int type, int span, int open_size);
 		int getClose(double *Close, char *InstrumentID, int type, int span, int close_size);
 		int getHigh(double *High, char *InstrumentID, int type, int span,int High_size);
 		int getLow(double *Low, char *InstrumentID, int type, int span, int Low_size);
 		int getVolume(int *Volume, char *InstrumentID, int type, int span, int Volume_size);
 		int getargVolume(int *argVolume, char *InstrumentID, int type, int span, int argVolume_size);
-		void UpdateData(char *InstrumentID, Node node);
+		void UpdateData(char *InstrumentID, Node *node, long timestamp);
 		void DeleteInstrument(int InstrumentNumber);
 		~Client()
 		{

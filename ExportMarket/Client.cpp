@@ -3,44 +3,66 @@
 #include <cstring>
 using namespace std;
 
-InstrumentNode::InstrumentNode(char *pInstrumentID, int ptype)
+InstrumentNode::InstrumentNode(char *pInstrumentID, int ptype, int pspan, int Max_Size)
 {
 	strcpy(InstrumentID, pInstrumentID);
 	type = ptype;
+	span = pspan;
+	timestamp = 0;
+	myClientBase = new ClientBase(Max_Size);
+	tmp_Node = new Node;
 }
-void Client::AddInstrument(char *InstrumentID, int type, int Max_Size)
+
+InstrumentNode::~InstrumentNode()
 {
-	InstrumentNode pNode(InstrumentID, type);
-	Instrument.push_back(pNode);
-	ClientBase *clientNode = new ClientBase(Max_Size);
+	delete myClientBase;
+	delete tmp_Node;
+}
+
+void Client::AddInstrument(char *InstrumentID, int type, int span, int Max_Size)
+{
+	int span_sec = getSpan(type, span);
+	InstrumentNode *pNode = new InstrumentNode(InstrumentID, type, span, Max_Size);
 	if(mydatafetch -> connect())
     {
-        mydatafetch -> set_node_data(InstrumentID, clientNode);
+		pNode -> timestamp = mydatafetch -> set_node_data(InstrumentID, pNode -> myClientBase, span_sec);
         mydatafetch -> close_connect();
     }
     else
     {
         cerr << __FUNCTION__ << "DataBase DisConnect" << endl;
     }
-    myClientBase.push_back(clientNode);
+	Instrument.push_back(pNode);
 	cout << __FUNCTION__ << "FINISH" <<endl;
 }
-void Client::UpdateData(char *InstrumentID, Node node)
+
+void Client::UpdateData(char *InstrumentID, Node *node, long timestamp)
 {
 	for(int i = 0; i < Instrument.size(); i++)
 	{
-		if (strcmp(Instrument[i].InstrumentID, InstrumentID) == 0)
+		if (strcmp(Instrument[i] -> InstrumentID, InstrumentID) == 0)
 		{
-			myClientBase[i] -> UpdateData(node);
+			int span_sec = getSpan(Instrument[i] -> type, Instrument[i] -> span);
+			if(timestamp > Instrument[i] -> timestamp + span_sec)
+			{
+				Instrument[i] -> myClientBase -> UpdateData(*Instrument[i] -> tmp_Node);
+				Instrument[i] -> tmp_Node -> reset(node);
+				Instrument[i] -> timestamp = timestamp + span_sec; 
+			}
+			else
+			{
+				Instrument[i] -> tmp_Node -> UpdateNode(node);
+			}
+
 		}
 	}
 }
 
-void Client::AddInstrument(const char *InstrumentID, int type, int Max_Size)
+void Client::AddInstrument(const char *InstrumentID, int type, int span, int Max_Size)
 {
 	char pInstrumentID[11];
 	strcpy(pInstrumentID, InstrumentID);
-	AddInstrument(pInstrumentID, type, Max_Size);
+	AddInstrument(pInstrumentID, type, span, Max_Size);
 }
 
 bool Client::find(char *InstrumentID)
@@ -49,7 +71,7 @@ bool Client::find(char *InstrumentID)
 	strcpy(pInstrument, InstrumentID);
 	for (int i =0; i < Instrument.size(); i++)
 	{
-		if(!strcmp(Instrument[i].InstrumentID, pInstrument))
+		if(!strcmp(Instrument[i] -> InstrumentID, pInstrument))
 		{
 			return true;
 		}
@@ -65,15 +87,15 @@ int Client::getSpan(int type, int span)
 		return span*60*60*24;
 	return span;
 }
-int Client::find(const char *InstrumentID, int type)
+int Client::find(const char *InstrumentID, int type, int span)
 {
 	int count = -1;
 	char pInstrument[11];
 	strcpy(pInstrument, InstrumentID);
 	for (int i = 0; i < Instrument.size(); i++)
 	{
-		if (strcmp(Instrument[i].InstrumentID, pInstrument) == 0\
-				&& type == Instrument[i].type)
+		if (strcmp(Instrument[i] -> InstrumentID, pInstrument) == 0\
+				&& type == Instrument[i] -> type && span == Instrument[i] -> span)
 		{
 			count = i;
 			break;
@@ -84,46 +106,43 @@ int Client::find(const char *InstrumentID, int type)
 
 int Client::getOpen(double *Open, char *InstrumentID, int type, int span, int open_size)
 {
-	int Index = find(InstrumentID, type);
-	int span_of_type = getSpan(type, span);
-	return myClientBase[Index] -> getOpen(Open, span_of_type, open_size); 
+	int Index = find(InstrumentID, type, span);
+	return Instrument[Index] -> myClientBase -> getOpen(Open, open_size); 
 }
 
 int Client::getClose(double *Close, char *InstrumentID, int type, int span, int close_size)
 {
-	int Index = find(InstrumentID, type);
+	int Index = find(InstrumentID, type, span);
 	int span_of_type = getSpan(type, span);
-	return myClientBase[Index] -> getClose(Close, span_of_type, close_size); 
+	return Instrument[Index] -> myClientBase -> getClose(Close, close_size); 
 }
 int Client::getHigh(double *High, char *InstrumentID, int type, int span, int High_size)
 {
-	int Index = find(InstrumentID, type);
+	int Index = find(InstrumentID, type, span);
 	int span_of_type = getSpan(type, span);
-	return myClientBase[Index] -> getHigh(High, span_of_type, High_size);
+	return Instrument[Index] -> myClientBase -> getHigh(High, High_size);
 }
 int Client::getLow(double *Low, char *InstrumentID, int type, int span, int Low_size)
 {
-	int Index = find(InstrumentID, type);
+	int Index = find(InstrumentID, type, span);
 	int span_of_type = getSpan(type, span);
-	return myClientBase[Index] -> getLow(Low, span_of_type, Low_size);
+	return Instrument[Index] -> myClientBase -> getLow(Low, Low_size);
 }
 int Client::getVolume(int *Volume, char *InstrumentID, int type, int span, int Volume_size)
 {
-	int Index = find(InstrumentID, type);
+	int Index = find(InstrumentID, type, span);
 	int span_of_type = getSpan(type, span);
-	return myClientBase[Index] -> getVolume(Volume, span_of_type, Volume_size);
+	return Instrument[Index] -> myClientBase -> getVolume(Volume, Volume_size);
 }
 int Client::getargVolume(int *argVolume, char *InstrumentID, int type, int span, int argVolume_size)
 {
-	int Index = find(InstrumentID, type);
+	int Index = find(InstrumentID, type, span);
 	int span_of_type = getSpan(type, span);
-	return myClientBase[Index] -> getargvolume(argVolume, span_of_type, argVolume_size);
+	return Instrument[Index] -> myClientBase -> getargvolume(argVolume, argVolume_size);
 }
 void Client::DeleteInstrument(int InstrumentNodeNumber)
 {
-	vector<InstrumentNode>::iterator itr = Instrument.begin();
-	vector<ClientBase*>::iterator ctr = myClientBase.begin();
+	vector<InstrumentNode*>::iterator itr = Instrument.begin();
+	delete Instrument[InstrumentNodeNumber - 1];
 	Instrument.erase(itr + InstrumentNodeNumber);
-	delete myClientBase[InstrumentNodeNumber - 1];
-	myClientBase.erase(ctr + InstrumentNodeNumber);
 }

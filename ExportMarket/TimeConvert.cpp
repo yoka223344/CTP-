@@ -7,7 +7,7 @@
 
 #include<iostream>
 #include <ctime>
-#include <string.h>
+#include <cstring>
 using namespace std;
 
 time_t TimeStamp_Convert(char *day, char *time)

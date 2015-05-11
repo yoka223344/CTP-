@@ -17,7 +17,7 @@ public:
 		char *passwd = "abc0cba",
 		char *database = "FutureMarket",
 		int port = 3306);
-    void set_node_data(char *InstrumentID, ClientBase *myClient);
+    long set_node_data(char *InstrumentID, ClientBase *myClient, int span_sec);
 	// begintime and endtime format is %Y%m%d%H:%M:%S ps:2015041511:13:00
 	//Tick level and Min level closeprice;type 0 : Tick; 1 : Min
 	vector<double> get_ClosePrice(char *Instrument, char *begintime, char *endtime, int type);

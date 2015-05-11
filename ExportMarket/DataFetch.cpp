@@ -5,6 +5,7 @@
 #include "mysql/mysql.h"
 #include <stdlib.h>
 #include <ctime>
+#include <cfloat>
 
 using namespace std;
 
@@ -204,8 +205,10 @@ int Datafetch::get_sql_result(char *sql)
 	}
 	return res;
 }
-void Datafetch::set_node_data(char *InstrumentID, ClientBase *myClient)
+
+long Datafetch::set_node_data(char *InstrumentID, ClientBase *myClient, int span_sec)
 {
+	int max_size = myClient -> node_number * span_sec *4 ; 
     MYSQL_ROW m_row;
     char sql[1000];
     char table[20];
@@ -213,21 +216,58 @@ void Datafetch::set_node_data(char *InstrumentID, ClientBase *myClient)
     Get_table_kind(Instrument_kind, InstrumentID);
     GetTableName(Instrument_kind, table);
     sprintf(sql, "SELECT `LastPrice`, `OpenInterest`, `Volume`, `ActionDay`, `UpdateTime` \
-, `TimeStamp` FROM %s WHERE `InstrumentID`= \"%s\" and `TradingDay` IS NOT NULL ORDER BY `TimeStamp` DESC limit %d", table, InstrumentID, myClient -> node_number);
+, `TimeStamp` FROM %s WHERE `InstrumentID`= \"%s\" and `TradingDay` IS NOT NULL ORDER BY `TimeStamp` DESC limit %d", table, InstrumentID, max_size);
 	int result_num =  get_sql_result(sql);
     Node *pNode = myClient -> NodeList;
+	long timestamp_end = -1;
+	long last_timestamp = -1;
+	double High = 0;
+	double Low = DBL_MAX;
     while((m_row = mysql_fetch_row(_result)))
     {
-        pNode -> Last = atof(m_row[0]);
-        pNode -> OpenInterest = atoi(m_row[1]);
-        pNode -> ArgVolume = atoi(m_row[2]);
-        strcpy(pNode ->Day, m_row[3]);
-        strcpy(pNode ->Time, m_row[4]);
-        pNode -> TimeStamp = atol(m_row[5]);
-        pNode = pNode -> Next;
-		if (pNode == myClient -> NodeList)
-			break;
+		double lastprice = atof(m_row[0]);
+		if (timestamp_end == -1)
+		{
+			last_timestamp = atol(m_row[5]);
+			timestamp_end = atol(m_row[5]) - span_sec;
+		}
+		if (atol(m_row[5]) < timestamp_end)
+		{
+			timestamp_end =atol(m_row[5]) -  span_sec;
+			pNode -> Last = lastprice;
+			pNode -> OpenInterest = atoi(m_row[1]);
+			pNode -> ArgVolume = atoi(m_row[2]);
+			pNode -> High = High;
+			pNode -> Low = Low;
+			strcpy(pNode ->Day, m_row[3]);
+			strcpy(pNode ->Time, m_row[4]);
+			pNode = pNode -> Next;
+			if (pNode == myClient -> NodeList)
+				break;
+			else
+			{
+				pNode -> Open = lastprice;
+				High = lastprice;
+				Low = lastprice;
+				pNode -> Close = lastprice;
+			}
+			if (pNode -> Front -> ArgVolume - pNode -> ArgVolume > 0)
+				pNode -> Volume = pNode -> Front -> ArgVolume - pNode -> ArgVolume;
+		}
+		else
+		{
+			if (High < lastprice)
+			{
+				High = lastprice;
+			}
+			if (Low > lastprice)
+			{
+				Low = lastprice;
+			}
+			pNode -> Open = lastprice; 
+		}
 	}
+	return (timestamp_end + span_sec);
 }
 
 vector<double> Datafetch::get_ClosePrice(char *Instrument,

@@ -55,10 +55,10 @@ int main()
 	my_logger = new Logger(log_file, log4cpp::Priority::DEBUG);
 	char *filepathtest = "/home/lizx/crawlled_page/test.txt";
 	GetInstrumentID(filepathtest);
-    myClient -> AddInstrument("cu1509", 0, 50);
-    myClient -> AddInstrument("cu1512", 0, 50);
+    myClient -> AddInstrument("cu1509", 0, 20, 50);
+    myClient -> AddInstrument("cu1512", 0, 20, 50);
 	double Open[100] = {0};
-	cout << myClient -> getOpen(Open, "cu1509", 0, 0, 100) << endl;
+	cout << myClient -> getHigh(Open, "cu1509", 0, 20, 100) << endl;
 	for (int i = 0 ;i < 51; i++)
 	{
 		cout << Open[i] <<endl;

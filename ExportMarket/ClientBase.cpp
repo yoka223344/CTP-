@@ -3,6 +3,28 @@
 #include <cstring>
 #include "ClientBase.h"
 using namespace std;
+void Node::reset(Node *node)
+{
+	Last = node -> Last;
+	High = node -> Last;
+	Low = node -> Last;
+	Open = node -> Last;
+	Close = node -> Last;
+	OpenInterest = node -> OpenInterest;
+	Volume = 0;
+	ArgVolume = node -> ArgVolume;
+}
+void Node::UpdateNode(Node *node)
+{
+	Last = node -> Last;
+	if (High < Last)
+		High = Last;
+	if (Low > Last)
+		Low = Last;
+	Close = Last;
+	OpenInterest = node -> OpenInterest;
+	ArgVolume = node -> ArgVolume;
+}
 ClientBase::ClientBase(int MaxSize)
 {
 	node_number = MaxSize;
@@ -25,32 +47,15 @@ void ClientBase::UpdateData(Node node)
     NodeList -> Last = node.Last;
     NodeList -> OpenInterest = node.OpenInterest;
     NodeList -> ArgVolume = node.ArgVolume;
+	NodeList -> High = node.High;
+	NodeList -> Low = node.Low;
+	NodeList -> Open = node.Open;
+	NodeList -> Close = node.Close;
+	NodeList -> Volume = node.Volume;
     strcpy(NodeList ->Day, node.Day);
     strcpy(NodeList ->Time, node.Time);
-    NodeList -> TimeStamp = node.TimeStamp;
 }
-template<class T> int ClientBase::getData(T *result, T Node:: *p, int span, int size)
-{
-	int length = size;
-	Node *pNode = NodeList;
-	long tmp_timestamp = pNode -> TimeStamp;
-	int count = 0;
-	for (int i = 0; i < length; i++)
-	{
-		result[i] =  *pNode.*p;
-		tmp_timestamp -= span;
-		++count;
-		while(pNode -> TimeStamp > tmp_timestamp)
-		{
-			pNode = pNode -> Next;
-			if (pNode == NodeList)
-				break;
-		}
-		if (pNode == NodeList)
-			break;
-	}
-	return count;
-}
+
 template<class T> int ClientBase::getData(T *result, T Node:: *p, int size)
 {
 	Node *pNode = NodeList;
@@ -63,137 +68,43 @@ template<class T> int ClientBase::getData(T *result, T Node:: *p, int size)
 	}
 	return count;
 }
-int ClientBase::getOpen(double *result, int span, int size)
-{
-	if(span == 0)
-	{
-		double Node::*offsetLast = &Node::Last;
-		return getData(result, offsetLast, size);
-	}
-    int length = size;
-	Node *pNode = NodeList;
-	long tmp_timestamp = pNode -> TimeStamp - span;
-	double Open = 0;
-	int count = 0;
-    while(pNode ->Next != NodeList && count < length)
-    {
-        if( tmp_timestamp >= pNode -> TimeStamp )
-        {
-            Open =  pNode ->Front -> Last;
-            result[count] = Open;
-            count ++;
-            tmp_timestamp -= span;
-        }
-        pNode = pNode -> Next;
-    }
-	return count;
-}
-int ClientBase::getClose(double *result, int span, int size)
-{
-	if(span == 0)
-	{
-		double Node::*offsetLast = &Node::Last;
-		return getData(result, offsetLast, size);
-	}
-    int length = size;
-	Node *pNode = NodeList;
-	long tmp_timestamp = pNode -> TimeStamp;
-	double Close = 0;
-	int count = 0;
-    while(pNode -> Next != NodeList && count < size)
-    {
-        if( tmp_timestamp <= pNode -> TimeStamp )
-        {
-            Close =  pNode -> Last;
-            result[count] = Close;
-            count ++;
-        }
-        pNode = pNode -> Next;
-    }
-	return count;
-}
-int ClientBase::getHigh(double *result, int span, int size)
-{
-	if(span == 0)
-	{
-		double Node::*offsetLast = &Node::Last;
-		return getData(result, offsetLast, size);
-	}
-    int length = size;
-	Node *pNode = NodeList;
-	long tmp_timestamp = pNode -> TimeStamp;
-	double High = 0;
-	int count = 0;
-    while(pNode -> Next != NodeList && count < length)
-    {
-        if (High < pNode -> Last)
-            High = pNode -> Last;
-        if( tmp_timestamp >= pNode -> TimeStamp )
-        {
-            result[count] = High;
-            count ++;
-        }
-        pNode = pNode -> Next;
-    }
-	return count;
-}
-int ClientBase::getLow(double *result, int span, int size)
-{
-	if(span == 0)
-	{
-		double Node::*offsetLast = &Node::Last;
-		return getData(result, offsetLast, size);
-	}
-    int length = size;
-	Node *pNode = NodeList;
-	long tmp_timestamp = pNode -> TimeStamp;
-	double Low = DBL_MAX ;
-	int count = 0;
-    while(pNode -> Next != NodeList && count < length)
-    {
-        if (Low > pNode -> Last)
-            Low = pNode -> Last;
-        if( tmp_timestamp >= pNode -> TimeStamp )
-        {
-            result[count] = Low;
-            count ++;
-        }
-        pNode = pNode -> Next;
-    }
-	return count;
-}
-int ClientBase::getVolume(int *result, int span, int size)
-{
-	int count = 0;
-	if(span == 0)
-	{
-		int Node::*offsetVolume = &Node::ArgVolume;
-		count = getData(result, offsetVolume, size);
-	}
-	else
-	{
 
-		int length = size;
-		int Node::*offsetVolume = &Node::ArgVolume;
-		count = getData(result, offsetVolume, span, size);
-	}
-	for (int i = 0; i < count - 1; i++)
-    {
-        result[i] -= result[i+1];
-    }
-	return count;
-}
-int ClientBase::getargvolume(int *result, int span, int size)
+int ClientBase::getOpen(double *result, int size)
 {
-	int count = 0;
-	int Node::*offsetargVolume = &Node::ArgVolume;
-	if(span == 0)
-	{
-		count = getData(result, offsetargVolume, span, size);
-	}
-	count = getData(result, offsetargVolume, span, size);
-	return count;
+	double Node::*offsetLast = &Node::Open;
+	return getData(result, offsetLast, size);
 }
+
+int ClientBase::getClose(double *result, int size)
+{
+	double Node::*offsetLast = &Node::Close;
+	return getData(result, offsetLast, size);
+}
+
+int ClientBase::getHigh(double *result, int size)
+{
+	double Node::*offsetLast = &Node::High;
+	return getData(result, offsetLast, size);
+}
+
+int ClientBase::getLow(double *result, int size)
+{
+	double Node::*offsetLast = &Node::Low;
+	return getData(result, offsetLast, size);
+}
+
+int ClientBase::getVolume(int *result, int size)
+{
+	int Node::*offsetVolume = &Node::Volume;
+	return getData(result, offsetVolume, size);
+}
+
+int ClientBase::getargvolume(int *result, int size)
+{
+	int Node::*offsetargVolume = &Node::ArgVolume;
+	return getData(result, offsetargVolume, size);
+}
+
 ClientBase::~ClientBase()
 {
 	Node *pNode = NodeList;

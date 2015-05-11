@@ -7,39 +7,41 @@ class Node
 	public:
 		//static int count;
 		double Last;
+		double High;
+		double Low;
+		double Open;
+		double Close;
 		int OpenInterest;
+		int Volume;
 		int ArgVolume;
 		char Day[9];
 		char Time[11];
-		int TimeStamp;
 		Node *Next;
 		Node *Front;
 		Node()
 		{
+			Volume = 0;
+			ArgVolume = 0;
 			Next = NULL;
 			Front = NULL;
-			//cout << "create" << ++count <<endl;
 		}
-		/*~Node()
-		{
-			cout << "delete" << --count <<endl;
-		}*/
+		void reset(Node *node);
+		void UpdateNode(Node *node);
 };
 class ClientBase
 {
 	private:
-		template<class T> int getData(T *result, T Node::* p, int span, int size);
 		template<class T> int getData(T *result, T Node::* p, int size);
 	public:
 	    int node_number;
 		Node *NodeList;
 		ClientBase(int MaxSize = 1000);
-		int getOpen(double *result, int span, int size);
-		int getClose(double *result, int span, int size);
-		int getHigh(double *result, int span, int size);
-		int getLow(double *result, int span, int size);
-		int getVolume(int *result, int span, int size);
-		int getargvolume(int *result, int span, int size);
+		int getOpen(double *result, int size);
+		int getClose(double *result, int size);
+		int getHigh(double *result, int size);
+		int getLow(double *result, int size);
+		int getVolume(int *result, int size);
+		int getargvolume(int *result, int size);
 		void UpdateData(Node node);
 		~ClientBase();
 };
